@@ -14,14 +14,14 @@ import retrofit2.http.Path
 interface ApiService {
 
     @Headers(
-        "Authorization: Token r8_OqW4ZQeBJ4ir999EcFrf8IsI75h4OBa2snSD4",
+        "Authorization: Token r8_e9RVRVMET9WHqdeWiPa0iea7elNnWxz1Wg721",
         "Content-Type: application/json"
     )
     @POST("predictions")
     fun postTheImage(@Body data: MyData): Call<TestResponse>
 
     @Headers(
-        "Authorization: Token r8_OqW4ZQeBJ4ir999EcFrf8IsI75h4OBa2snSD4",
+        "Authorization: Token r8_e9RVRVMET9WHqdeWiPa0iea7elNnWxz1Wg721",
         "Content-Type: application/json"
     )
     @GET("predictions/{id}")
@@ -30,7 +30,7 @@ interface ApiService {
     ): Call<ResultResponse>
 
     @Headers(
-        "Authorization: Token r8_OqW4ZQeBJ4ir999EcFrf8IsI75h4OBa2snSD4",
+        "Authorization: Token r8_e9RVRVMET9WHqdeWiPa0iea7elNnWxz1Wg721",
         "Content-Type: application/json"
     )
     @GET("predictions/{id}/cancel")
