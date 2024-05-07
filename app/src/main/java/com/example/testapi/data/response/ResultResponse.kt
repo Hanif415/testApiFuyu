@@ -14,7 +14,7 @@ data class ResultResponse(
 	val version: String,
 
 	@field:SerializedName("output")
-	val output: String,
+	val output: List<String?>? = null,
 
 	@field:SerializedName("completed_at")
 	val completedAt: String,

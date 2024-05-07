@@ -3,8 +3,10 @@ package com.example.testapi.ui
 import android.Manifest
 import android.annotation.SuppressLint
 import android.content.pm.PackageManager
-import android.net.Uri
+import android.graphics.Bitmap
+import android.graphics.BitmapFactory
 import android.os.Bundle
+import android.speech.tts.TextToSpeech
 import android.util.Log
 import android.view.View
 import android.widget.ImageButton
@@ -37,6 +39,7 @@ import kotlinx.coroutines.runBlocking
 import retrofit2.Call
 import retrofit2.Callback
 import retrofit2.Response
+import java.io.ByteArrayOutputStream
 import java.io.File
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -53,9 +56,11 @@ class MainActivity : AppCompatActivity() {
     lateinit var flipCamera: ImageButton
     lateinit var previewView: PreviewView
     private var cameraFacing = CameraSelector.LENS_FACING_BACK
+    var first = true
 
-    var imageUri: Uri? = null
     var storageReference: StorageReference? = null
+
+    private var tts: TextToSpeech? = null
 
     private val activityResultLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
@@ -99,7 +104,19 @@ class MainActivity : AppCompatActivity() {
             }
             startCamera(cameraFacing)
         })
-//        generate()
+
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val result = tts!!.setLanguage(Locale("id", "ID"));
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Log.e("TTS", "The Language specified is not supported!")
+                }
+            } else {
+                Log.e("TTS", "Initialization Failed!")
+            }
+        }
+
+
 
     }
 
@@ -127,6 +144,18 @@ class MainActivity : AppCompatActivity() {
                 val camera: Camera =
                     cameraProvider.bindToLifecycle(this, cameraSelector, preview, imageCapture)
 
+                if (camera.cameraInfo.hasFlashUnit()) {
+                    camera.cameraControl.enableTorch(true)
+                } else {
+                    runOnUiThread {
+                        Toast.makeText(
+                            this@MainActivity,
+                            "Flash is not available currently",
+                            Toast.LENGTH_SHORT
+                        ).show()
+                    }
+                }
+
                 capture.setOnClickListener {
                     if (ContextCompat.checkSelfPermission(
                             this@MainActivity,
@@ -137,7 +166,6 @@ class MainActivity : AppCompatActivity() {
                     }
                     takePicture(imageCapture)
                 }
-                toggleFlash.setOnClickListener { setFlashIcon(camera) }
 
                 preview.setSurfaceProvider(previewView.surfaceProvider)
 
@@ -158,11 +186,7 @@ class MainActivity : AppCompatActivity() {
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     runOnUiThread {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Image saved at: " + file.path,
-                            Toast.LENGTH_LONG
-                        ).show()
+                        loud("Foto telah ditangkap")
 
                         uploadImage(file)
                     }
@@ -182,26 +206,6 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private fun setFlashIcon(camera: Camera) {
-        if (camera.cameraInfo.hasFlashUnit()) {
-            if (camera.cameraInfo.torchState.value == 0) {
-                camera.cameraControl.enableTorch(true)
-                toggleFlash.setImageResource(R.drawable.baseline_flash_off_24)
-            } else {
-                camera.cameraControl.enableTorch(false)
-                toggleFlash.setImageResource(R.drawable.baseline_flash_on_24)
-            }
-        } else {
-            runOnUiThread {
-                Toast.makeText(
-                    this@MainActivity,
-                    "Flash is not available currently",
-                    Toast.LENGTH_SHORT
-                ).show()
-            }
-        }
-    }
-
     private fun aspectRatio(width: Int, height: Int): Int {
         val previewRatio = Math.max(width, height).toDouble() / Math.min(width, height)
         if (Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
@@ -217,19 +221,18 @@ class MainActivity : AppCompatActivity() {
         storageReference =
             FirebaseStorage.getInstance().getReference("images/$fileName")
 
-        imageUri = Uri.fromFile(file);
-        storageReference!!.putFile(imageUri!!)
+        val bitmap = BitmapFactory.decodeFile(file.toString())
+        val baos = ByteArrayOutputStream()
+        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
+        val compressedImageData = baos.toByteArray()
+
+        storageReference!!.putBytes(compressedImageData)
             .addOnSuccessListener {
-                Toast.makeText(
-                    this@MainActivity,
-                    "Successfully Uploaded",
-                    Toast.LENGTH_SHORT
-                ).show()
+                loud("Harap tunggu sebentar")
                 storageReference!!.getDownloadUrl()
                     .addOnSuccessListener { uri ->
                         // This is the download URL for your image
                         val imageUrl = uri.toString()
-                        Log.d("test", imageUrl)
                         generate(imageUrl)
                         // You can now use this URL to view the image in a browser
                     }
@@ -248,7 +251,7 @@ class MainActivity : AppCompatActivity() {
     private fun generate(imageUrl: String) {
 
         val inputs = Inputs(
-            imageUrl, "what is that?", 1024, 0.2, 1
+            imageUrl, "apa itu dan ada tulisan apa?", 1024, 0.2, 1
         )
 
         val myData = MyData(
@@ -279,24 +282,32 @@ class MainActivity : AppCompatActivity() {
             ) {
                 val responseBody = response.body()
                 if (responseBody != null) {
-                    if (responseBody.status == "starting") {
+                    if (responseBody.status == "processing") {
                         setData("status: ${responseBody.status} \nattempt: ${n++}")
+                        loud(responseBody.status)
                         runBlocking {
                             launch {
-                                delay(15000L) // Delay for 2 seconds
+                                delay(3000L) // Delay for 2 seconds
                                 getResult(id)
                             }
                         }
-                    } else if (responseBody.status == "processing") {
+                    } else if (responseBody.status == "starting") {
                         setData("status: ${responseBody.status} \nattempt: ${n++}")
-                        runBlocking {
-                            launch {
-                                delay(2000L) // Delay for 2 seconds
-                                getResult(id)
+                        loud(responseBody.status)
+                        if (first) {
+                            runBlocking {
+                                launch {
+                                    delay(5000L) // Delay for 2 seconds
+                                    getResult(id)
+                                }
                             }
                         }
                     } else {
-//                        setData("result: ${responseBody.output}")
+                        val sentence = responseBody.output?.joinToString(" ")
+                        setData("result: $sentence")
+                        if (sentence != null) {
+                            loud(sentence)
+                        }
                     }
                 }
             }
@@ -308,23 +319,27 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun cancel(id: String) {
-        val client = ApiConfig.getApiService().resultCancel(id)
-        client.enqueue(object : Callback<ResultResponse> {
-            override fun onResponse(
-                call: Call<ResultResponse>, response: Response<ResultResponse>
-            ) {
-                getResult(id)
-            }
-
-            override fun onFailure(call: Call<ResultResponse>, t: Throwable) {
-                Log.e(TAG, "onFailure: ${t.message}")
-            }
-
-        })
-    }
+//    private fun cancel(id: String) {
+//        val client = ApiConfig.getApiService().resultCancel(id)
+//        client.enqueue(object : Callback<ResultResponse> {
+//            override fun onResponse(
+//                call: Call<ResultResponse>, response: Response<ResultResponse>
+//            ) {
+//                getResult(id)
+//            }
+//
+//            override fun onFailure(call: Call<ResultResponse>, t: Throwable) {
+//                Log.e(TAG, "onFailure: ${t.message}")
+//            }
+//
+//        })
+//    }
 
     private fun setData(result: String) {
         binding.text.text = result
+    }
+
+    private fun loud(text: String) {
+        tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
     }
 }

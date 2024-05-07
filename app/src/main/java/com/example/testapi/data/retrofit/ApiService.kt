@@ -1,5 +1,7 @@
 package com.example.testapi.data.retrofit
 
+import com.example.testapi.data.response.ApiConstants.AUTHORIZATION_HEADER
+import com.example.testapi.data.response.ApiConstants.CONTENT_TYPE_HEADER
 import com.example.testapi.data.response.MyData
 import com.example.testapi.data.response.ResultResponse
 import com.example.testapi.data.response.TestResponse
@@ -14,27 +16,27 @@ import retrofit2.http.Path
 interface ApiService {
 
     @Headers(
-        "Authorization: Token r8_e9RVRVMET9WHqdeWiPa0iea7elNnWxz1Wg721",
-        "Content-Type: application/json"
+        AUTHORIZATION_HEADER,
+        CONTENT_TYPE_HEADER
     )
     @POST("predictions")
     fun postTheImage(@Body data: MyData): Call<TestResponse>
 
     @Headers(
-        "Authorization: Token r8_e9RVRVMET9WHqdeWiPa0iea7elNnWxz1Wg721",
-        "Content-Type: application/json"
+        AUTHORIZATION_HEADER,
+        CONTENT_TYPE_HEADER
     )
     @GET("predictions/{id}")
     fun getResult(
         @Path("id") id: String
     ): Call<ResultResponse>
 
-    @Headers(
-        "Authorization: Token r8_e9RVRVMET9WHqdeWiPa0iea7elNnWxz1Wg721",
-        "Content-Type: application/json"
-    )
-    @GET("predictions/{id}/cancel")
-    fun resultCancel(
-        @Path("id") id: String
-    ): Call<ResultResponse>
+//    @Headers(
+//        "Authorization: Token r8_4v6YWRZTquzxCN7WLPcIrrU20kL4wdd1LHHtR",
+//        "Content-Type: application/json"
+//    )
+//    @GET("predictions/{id}/cancel")
+//    fun resultCancel(
+//        @Path("id") id: String
+//    ): Call<ResultResponse>
 }
