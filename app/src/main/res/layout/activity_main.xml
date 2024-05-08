@@ -30,25 +30,4 @@
         android:layout_centerVertical="true"
         android:layout_marginBottom="40sp" />
 
-    <ImageButton
-        android:id="@+id/toggleFlash"
-        android:layout_width="40sp"
-        android:layout_height="40sp"
-        android:layout_alignParentEnd="true"
-        android:layout_margin="10sp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/baseline_flash_on_24"
-        app:tint="#fff" />
-
-    <ImageButton
-        android:id="@+id/flipCamera"
-        android:layout_width="40sp"
-        android:layout_height="40sp"
-        android:layout_below="@id/toggleFlash"
-        android:layout_alignParentEnd="true"
-        android:layout_marginEnd="10sp"
-        android:background="?attr/selectableItemBackgroundBorderless"
-        android:src="@drawable/round_flip_camera_android_24"
-        app:tint="#fff" />
-
 </RelativeLayout>

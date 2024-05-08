@@ -49,30 +49,23 @@ import java.util.concurrent.Executors
 
 
 class MainActivity : AppCompatActivity() {
+    companion object {
+        private const val TAG = "MainActivity"
+    }
 
     private lateinit var binding: ActivityMainBinding
-    lateinit var capture: ImageButton
-    lateinit var toggleFlash: ImageButton
-    lateinit var flipCamera: ImageButton
     lateinit var previewView: PreviewView
     private var cameraFacing = CameraSelector.LENS_FACING_BACK
     var first = true
-
+    var n: Int = 1;
     var storageReference: StorageReference? = null
-
     private var tts: TextToSpeech? = null
-
     private val activityResultLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
             if (result) {
                 startCamera(cameraFacing)
             }
         }
-    var n: Int = 1;
-
-    companion object {
-        private const val TAG = "MainActivity"
-    }
 
     @SuppressLint("WrongThread")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -82,9 +75,6 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
 
         previewView = findViewById(R.id.cameraPreview);
-        capture = findViewById(R.id.capture);
-        toggleFlash = findViewById(R.id.toggleFlash);
-        flipCamera = findViewById(R.id.flipCamera);
 
         if (ContextCompat.checkSelfPermission(
                 this,
@@ -96,15 +86,6 @@ class MainActivity : AppCompatActivity() {
             startCamera(cameraFacing)
         }
 
-        flipCamera.setOnClickListener(View.OnClickListener {
-            cameraFacing = if (cameraFacing == CameraSelector.LENS_FACING_FRONT) {
-                CameraSelector.LENS_FACING_FRONT
-            } else {
-                CameraSelector.LENS_FACING_BACK
-            }
-            startCamera(cameraFacing)
-        })
-
         tts = TextToSpeech(this) { status ->
             if (status == TextToSpeech.SUCCESS) {
                 val result = tts!!.setLanguage(Locale("id", "ID"));
@@ -115,9 +96,6 @@ class MainActivity : AppCompatActivity() {
                 Log.e("TTS", "Initialization Failed!")
             }
         }
-
-
-
     }
 
     private fun startCamera(cameraFacing: Int) {
@@ -156,7 +134,7 @@ class MainActivity : AppCompatActivity() {
                     }
                 }
 
-                capture.setOnClickListener {
+                binding.cameraPreview.setOnClickListener {
                     if (ContextCompat.checkSelfPermission(
                             this@MainActivity,
                             Manifest.permission.WRITE_EXTERNAL_STORAGE
@@ -318,22 +296,6 @@ class MainActivity : AppCompatActivity() {
 
         })
     }
-
-//    private fun cancel(id: String) {
-//        val client = ApiConfig.getApiService().resultCancel(id)
-//        client.enqueue(object : Callback<ResultResponse> {
-//            override fun onResponse(
-//                call: Call<ResultResponse>, response: Response<ResultResponse>
-//            ) {
-//                getResult(id)
-//            }
-//
-//            override fun onFailure(call: Call<ResultResponse>, t: Throwable) {
-//                Log.e(TAG, "onFailure: ${t.message}")
-//            }
-//
-//        })
-//    }
 
     private fun setData(result: String) {
         binding.text.text = result
