@@ -28,7 +28,7 @@ class ApiConfig {
                 .addInterceptor(loggingInterceptor)
                 .build()
             val retrofit = Retrofit.Builder()
-                .baseUrl("https://api.replicate.com/v1/")
+                .baseUrl("https://deep-translate1.p.rapidapi.com/")
                 .addConverterFactory(GsonConverterFactory.create())
                 .client(client)
                 .build()

@@ -2,6 +2,7 @@ package com.example.testapi.ui
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
@@ -26,6 +27,8 @@ import androidx.core.content.ContextCompat
 import com.example.testapi.R
 import com.example.testapi.data.response.Inputs
 import com.example.testapi.data.response.MyData
+import com.example.testapi.data.response.RapidData
+import com.example.testapi.data.response.RapidResponse
 import com.example.testapi.data.response.ResultResponse
 import com.example.testapi.data.response.TestResponse
 import com.example.testapi.data.retrofit.ApiConfig
@@ -49,23 +52,21 @@ import java.util.concurrent.Executors
 
 
 class MainActivity : AppCompatActivity() {
-    companion object {
-        private const val TAG = "MainActivity"
-    }
 
     private lateinit var binding: ActivityMainBinding
+
     lateinit var previewView: PreviewView
     private var cameraFacing = CameraSelector.LENS_FACING_BACK
-    var first = true
-    var n: Int = 1;
-    var storageReference: StorageReference? = null
-    private var tts: TextToSpeech? = null
     private val activityResultLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
             if (result) {
                 startCamera(cameraFacing)
             }
         }
+
+    var storageReference: StorageReference? = null
+
+    private var tts: TextToSpeech? = null
 
     @SuppressLint("WrongThread")
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -155,6 +156,14 @@ class MainActivity : AppCompatActivity() {
         }, ContextCompat.getMainExecutor(this))
     }
 
+    private fun aspectRatio(width: Int, height: Int): Int {
+        val previewRatio = Math.max(width, height).toDouble() / Math.min(width, height)
+        if (Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
+            return AspectRatio.RATIO_4_3;
+        }
+        return AspectRatio.RATIO_16_9;
+    }
+
     fun takePicture(imageCapture: ImageCapture) {
         val file = File(getExternalFilesDir(null), System.currentTimeMillis().toString() + ".jpg")
         val outputFileOptions = ImageCapture.OutputFileOptions.Builder(file).build()
@@ -184,14 +193,6 @@ class MainActivity : AppCompatActivity() {
             })
     }
 
-    private fun aspectRatio(width: Int, height: Int): Int {
-        val previewRatio = Math.max(width, height).toDouble() / Math.min(width, height)
-        if (Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
-            return AspectRatio.RATIO_4_3;
-        }
-        return AspectRatio.RATIO_16_9;
-    }
-
     private fun uploadImage(file: File) {
         val formatter = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.CANADA)
         val now = Date()
@@ -211,7 +212,10 @@ class MainActivity : AppCompatActivity() {
                     .addOnSuccessListener { uri ->
                         // This is the download URL for your image
                         val imageUrl = uri.toString()
-                        generate(imageUrl)
+                        val intent = Intent(this, Chat::class.java).apply {
+                            putExtra("EXTRA_URL", imageUrl)
+                        }
+                        startActivity(intent)
                         // You can now use this URL to view the image in a browser
                     }
                     .addOnFailureListener {
@@ -224,81 +228,6 @@ class MainActivity : AppCompatActivity() {
                     Toast.LENGTH_SHORT
                 ).show()
             }
-    }
-
-    private fun generate(imageUrl: String) {
-
-        val inputs = Inputs(
-            imageUrl, "apa itu dan ada tulisan apa?", 1024, 0.2, 1
-        )
-
-        val myData = MyData(
-            inputs, "01359160a4cff57c6b7d4dc625d0019d390c7c46f553714069f114b392f4a726"
-        )
-
-        val client = ApiConfig.getApiService().postTheImage(myData)
-        client.enqueue(object : Callback<TestResponse> {
-            override fun onResponse(call: Call<TestResponse>, response: Response<TestResponse>) {
-                val responseBody = response.body()
-                if (responseBody != null) {
-                    getResult(responseBody.id)
-                }
-            }
-
-            override fun onFailure(call: Call<TestResponse>, t: Throwable) {
-                Log.e(TAG, "onFailure: ${t.message}")
-            }
-
-        })
-    }
-
-    private fun getResult(id: String) {
-        val client = ApiConfig.getApiService().getResult(id)
-        client.enqueue(object : Callback<ResultResponse> {
-            override fun onResponse(
-                call: Call<ResultResponse>, response: Response<ResultResponse>
-            ) {
-                val responseBody = response.body()
-                if (responseBody != null) {
-                    if (responseBody.status == "processing") {
-                        setData("status: ${responseBody.status} \nattempt: ${n++}")
-                        loud(responseBody.status)
-                        runBlocking {
-                            launch {
-                                delay(3000L) // Delay for 2 seconds
-                                getResult(id)
-                            }
-                        }
-                    } else if (responseBody.status == "starting") {
-                        setData("status: ${responseBody.status} \nattempt: ${n++}")
-                        loud(responseBody.status)
-                        if (first) {
-                            runBlocking {
-                                launch {
-                                    delay(5000L) // Delay for 2 seconds
-                                    getResult(id)
-                                }
-                            }
-                        }
-                    } else {
-                        val sentence = responseBody.output?.joinToString(" ")
-                        setData("result: $sentence")
-                        if (sentence != null) {
-                            loud(sentence)
-                        }
-                    }
-                }
-            }
-
-            override fun onFailure(call: Call<ResultResponse>, t: Throwable) {
-                Log.e(TAG, "onFailure: ${t.message}")
-            }
-
-        })
-    }
-
-    private fun setData(result: String) {
-        binding.text.text = result
     }
 
     private fun loud(text: String) {

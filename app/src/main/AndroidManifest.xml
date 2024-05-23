@@ -6,10 +6,12 @@
         android:name="android.hardware.camera"
         android:required="true" />
 
+    <uses-permission android:name="android.permission.RECORD_AUDIO"/>
+
     <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET" />
 
-    <uses-permission android:name="android.permission.INTERNET"/>
     <application
         android:allowBackup="true"
         android:dataExtractionRules="@xml/data_extraction_rules"
@@ -20,6 +22,9 @@
         android:supportsRtl="true"
         android:theme="@style/Theme.TestAPI"
         tools:targetApi="31">
+        <activity
+            android:name=".ui.Chat"
+            android:exported="false" />
         <activity
             android:name=".ui.MainActivity"
             android:exported="true">
