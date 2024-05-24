@@ -5,36 +5,19 @@
     android:id="@+id/mainView"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.Chat">
+    tools:context=".ui.ChatActivity">
 
     <ImageView
         android:id="@+id/iv_mic"
-        android:layout_width="60dp"
-        android:layout_height="60dp"
+        android:layout_width="120dp"
+        android:layout_height="120dp"
         android:layout_alignParentTop="true"
         android:layout_alignParentEnd="true"
-        android:layout_marginTop="204dp"
         android:src="@drawable/baseline_mic_none_24"
+        app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintHorizontal_bias="0.498"
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toTopOf="parent" />
-
-    <TextView
-        android:id="@+id/tv_speech_to_text"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_alignParentTop="true"
-        android:layout_alignParentEnd="true"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="44dp"
-        android:padding="10dp"
-        android:text="tap mic and speak"
-        android:textSize="30sp"
-        app:layout_constraintEnd_toEndOf="@+id/iv_mic"
-        app:layout_constraintHorizontal_bias="0.489"
-        app:layout_constraintStart_toStartOf="@+id/iv_mic"
-        app:layout_constraintTop_toBottomOf="@+id/iv_mic" />
-
 
 </androidx.constraintlayout.widget.ConstraintLayout>

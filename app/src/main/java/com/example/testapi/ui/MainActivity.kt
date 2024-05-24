@@ -6,11 +6,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.graphics.Matrix
+import android.media.ExifInterface
+import android.net.Uri
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
-import android.view.View
-import android.widget.ImageButton
 import android.widget.Toast
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
@@ -21,42 +22,33 @@ import androidx.camera.core.CameraSelector
 import androidx.camera.core.ImageCapture
 import androidx.camera.core.ImageCaptureException
 import androidx.camera.core.Preview
+import androidx.camera.core.impl.utils.MatrixExt.postRotate
 import androidx.camera.lifecycle.ProcessCameraProvider
-import androidx.camera.view.PreviewView
 import androidx.core.content.ContextCompat
-import com.example.testapi.R
-import com.example.testapi.data.response.Inputs
-import com.example.testapi.data.response.MyData
-import com.example.testapi.data.response.RapidData
-import com.example.testapi.data.response.RapidResponse
-import com.example.testapi.data.response.ResultResponse
-import com.example.testapi.data.response.TestResponse
-import com.example.testapi.data.retrofit.ApiConfig
+import androidx.core.net.toUri
 import com.example.testapi.databinding.ActivityMainBinding
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.firebase.storage.FirebaseStorage
 import com.google.firebase.storage.StorageReference
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
-import retrofit2.Call
-import retrofit2.Callback
-import retrofit2.Response
 import java.io.ByteArrayOutputStream
 import java.io.File
+import java.io.FileInputStream
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
 import java.util.concurrent.ExecutionException
 import java.util.concurrent.Executors
+import kotlin.math.abs
+import kotlin.math.max
+import kotlin.math.min
 
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
 
-    lateinit var previewView: PreviewView
     private var cameraFacing = CameraSelector.LENS_FACING_BACK
+
     private val activityResultLauncher =
         registerForActivityResult(ActivityResultContracts.RequestPermission()) { result ->
             if (result) {
@@ -64,7 +56,7 @@ class MainActivity : AppCompatActivity() {
             }
         }
 
-    var storageReference: StorageReference? = null
+    private var storageReference: StorageReference? = null
 
     private var tts: TextToSpeech? = null
 
@@ -75,11 +67,8 @@ class MainActivity : AppCompatActivity() {
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
-        previewView = findViewById(R.id.cameraPreview);
-
         if (ContextCompat.checkSelfPermission(
-                this,
-                Manifest.permission.CAMERA
+                this, Manifest.permission.CAMERA
             ) != PackageManager.PERMISSION_GRANTED
         ) {
             activityResultLauncher.launch(Manifest.permission.CAMERA)
@@ -87,20 +76,11 @@ class MainActivity : AppCompatActivity() {
             startCamera(cameraFacing)
         }
 
-        tts = TextToSpeech(this) { status ->
-            if (status == TextToSpeech.SUCCESS) {
-                val result = tts!!.setLanguage(Locale("id", "ID"));
-                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
-                    Log.e("TTS", "The Language specified is not supported!")
-                }
-            } else {
-                Log.e("TTS", "Initialization Failed!")
-            }
-        }
+        initTTS();
     }
 
     private fun startCamera(cameraFacing: Int) {
-        val aspectRatio: Int = aspectRatio(previewView.width, previewView.height)
+        val aspectRatio: Int = aspectRatio(binding.cameraPreview.width, binding.cameraPreview.height)
         val listenableFuture: ListenableFuture<ProcessCameraProvider> =
             ProcessCameraProvider.getInstance(this)
 
@@ -109,15 +89,14 @@ class MainActivity : AppCompatActivity() {
                 val cameraProvider: ProcessCameraProvider =
                     listenableFuture.get() as ProcessCameraProvider
 
-                val preview =
-                    Preview.Builder().setTargetAspectRatio(aspectRatio).build()
+                val preview = Preview.Builder().setTargetAspectRatio(aspectRatio).build()
 
                 val imageCapture = ImageCapture.Builder()
                     .setCaptureMode(ImageCapture.CAPTURE_MODE_MINIMIZE_LATENCY)
                     .setTargetRotation(windowManager.defaultDisplay.rotation).build()
 
-                val cameraSelector = CameraSelector.Builder()
-                    .requireLensFacing(cameraFacing).build()
+                val cameraSelector =
+                    CameraSelector.Builder().requireLensFacing(cameraFacing).build()
                 cameraProvider.unbindAll()
 
                 val camera: Camera =
@@ -127,18 +106,13 @@ class MainActivity : AppCompatActivity() {
                     camera.cameraControl.enableTorch(true)
                 } else {
                     runOnUiThread {
-                        Toast.makeText(
-                            this@MainActivity,
-                            "Flash is not available currently",
-                            Toast.LENGTH_SHORT
-                        ).show()
+                        loud("Flash kamera tidak tersedia")
                     }
                 }
 
                 binding.cameraPreview.setOnClickListener {
                     if (ContextCompat.checkSelfPermission(
-                            this@MainActivity,
-                            Manifest.permission.WRITE_EXTERNAL_STORAGE
+                            this@MainActivity, Manifest.permission.WRITE_EXTERNAL_STORAGE
                         ) != PackageManager.PERMISSION_GRANTED
                     ) {
                         activityResultLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
@@ -146,7 +120,7 @@ class MainActivity : AppCompatActivity() {
                     takePicture(imageCapture)
                 }
 
-                preview.setSurfaceProvider(previewView.surfaceProvider)
+                preview.setSurfaceProvider(binding.cameraPreview.surfaceProvider)
 
             } catch (e: ExecutionException) {
                 e.printStackTrace()
@@ -157,23 +131,36 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun aspectRatio(width: Int, height: Int): Int {
-        val previewRatio = Math.max(width, height).toDouble() / Math.min(width, height)
-        if (Math.abs(previewRatio - 4.0 / 3.0) <= Math.abs(previewRatio - 16.0 / 9.0)) {
-            return AspectRatio.RATIO_4_3;
+        val previewRatio = max(width, height).toDouble() / min(width, height)
+        if (abs(previewRatio - 4.0 / 3.0) <= abs(previewRatio - 16.0 / 9.0)) {
+            return AspectRatio.RATIO_4_3
         }
-        return AspectRatio.RATIO_16_9;
+        return AspectRatio.RATIO_16_9
     }
 
-    fun takePicture(imageCapture: ImageCapture) {
+    private fun initTTS() {
+        tts = TextToSpeech(this) { status ->
+            if (status == TextToSpeech.SUCCESS) {
+                val result = tts!!.setLanguage(Locale("id", "ID"));
+                if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) {
+                    Log.e("TTS", "The Language specified is not supported!")
+                }
+                loud("silahkan ketuk layar untuk mengambil foto")
+            } else {
+                Log.e("TTS", "Initialization Failed!")
+            }
+        }
+    }
+
+    private fun takePicture(imageCapture: ImageCapture) {
         val file = File(getExternalFilesDir(null), System.currentTimeMillis().toString() + ".jpg")
         val outputFileOptions = ImageCapture.OutputFileOptions.Builder(file).build()
-        imageCapture.takePicture(
-            outputFileOptions,
+        imageCapture.takePicture(outputFileOptions,
             Executors.newCachedThreadPool(),
             object : ImageCapture.OnImageSavedCallback {
                 override fun onImageSaved(outputFileResults: ImageCapture.OutputFileResults) {
                     runOnUiThread {
-                        loud("Foto telah ditangkap")
+                        loud("Foto telah ditangkap, harap tunggu sebentar")
 
                         uploadImage(file)
                     }
@@ -197,40 +184,68 @@ class MainActivity : AppCompatActivity() {
         val formatter = SimpleDateFormat("yyyy_MM_dd_HH_mm_ss", Locale.CANADA)
         val now = Date()
         val fileName = formatter.format(now)
-        storageReference =
-            FirebaseStorage.getInstance().getReference("images/$fileName")
+        storageReference = FirebaseStorage.getInstance().getReference("images/$fileName")
 
-        val bitmap = BitmapFactory.decodeFile(file.toString())
-        val baos = ByteArrayOutputStream()
-        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
-        val compressedImageData = baos.toByteArray()
+//        val bitmap = BitmapFactory.decodeFile(file.toString())
+//        val baos = ByteArrayOutputStream()
+//        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
+        val compressedImageData = adjustImageOrientation(file)
 
-        storageReference!!.putBytes(compressedImageData)
-            .addOnSuccessListener {
-                loud("Harap tunggu sebentar")
-                storageReference!!.getDownloadUrl()
-                    .addOnSuccessListener { uri ->
-                        // This is the download URL for your image
-                        val imageUrl = uri.toString()
-                        val intent = Intent(this, Chat::class.java).apply {
-                            putExtra("EXTRA_URL", imageUrl)
-                        }
-                        startActivity(intent)
-                        // You can now use this URL to view the image in a browser
+        val uri = Uri.fromFile(file)
+
+        if (compressedImageData != null) {
+            storageReference!!.putBytes(compressedImageData).addOnSuccessListener {
+                storageReference!!.getDownloadUrl().addOnSuccessListener { uri ->
+                    // This is the download URL for your image
+                    val imageUrl = uri.toString()
+                    val intent = Intent(this, ChatActivity::class.java).apply {
+                        putExtra("EXTRA_URL", imageUrl)
                     }
-                    .addOnFailureListener {
-                        // Handle any errors
-                    }
+                            startActivity(intent)
+                }.addOnFailureListener {
+                    // Handle any errors
+                }
             }.addOnFailureListener {
-                Toast.makeText(
-                    this@MainActivity,
-                    "Failed to Upload",
-                    Toast.LENGTH_SHORT
-                ).show()
+                loud("Terjadi kesalahan, tolong tangkap foto kembali")
             }
+        }
     }
+
+    private fun adjustImageOrientation(file: File): ByteArray? {
+        val exifInterface = ExifInterface(file.absolutePath)
+        val orientation = exifInterface.getAttributeInt(
+            ExifInterface.TAG_ORIENTATION,
+            ExifInterface.ORIENTATION_NORMAL
+        )
+        val rotationAngle = when (orientation) {
+            ExifInterface.ORIENTATION_ROTATE_90 -> 90
+            ExifInterface.ORIENTATION_ROTATE_180 -> 180
+            ExifInterface.ORIENTATION_ROTATE_270 -> 270
+            else -> 0
+        }
+
+        val bitmap = BitmapFactory.decodeFile(file.absolutePath)
+        if (bitmap == null) {
+            println("Failed to decode Bitmap from file")
+            return null
+        }
+
+        val matrix = Matrix().apply { postRotate(rotationAngle.toFloat()) }
+        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+
+        val baos = ByteArrayOutputStream()
+        rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
+        return baos.toByteArray()
+    }
+
 
     private fun loud(text: String) {
         tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
+    }
+
+    override fun onRestart() {
+        super.onRestart()
+        startCamera(cameraFacing)
+        loud("silahkan ketuk layar untuk mengambil foto")
     }
 }
