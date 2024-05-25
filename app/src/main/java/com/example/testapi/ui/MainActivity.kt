@@ -8,7 +8,6 @@ import android.graphics.Bitmap
 import android.graphics.BitmapFactory
 import android.graphics.Matrix
 import android.media.ExifInterface
-import android.net.Uri
 import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.util.Log
@@ -80,7 +79,8 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun startCamera(cameraFacing: Int) {
-        val aspectRatio: Int = aspectRatio(binding.cameraPreview.width, binding.cameraPreview.height)
+        val aspectRatio: Int =
+            aspectRatio(binding.cameraPreview.width, binding.cameraPreview.height)
         val listenableFuture: ListenableFuture<ProcessCameraProvider> =
             ProcessCameraProvider.getInstance(this)
 
@@ -186,12 +186,9 @@ class MainActivity : AppCompatActivity() {
         val fileName = formatter.format(now)
         storageReference = FirebaseStorage.getInstance().getReference("images/$fileName")
 
-//        val bitmap = BitmapFactory.decodeFile(file.toString())
-//        val baos = ByteArrayOutputStream()
-//        bitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
         val compressedImageData = adjustImageOrientation(file)
 
-        val uri = Uri.fromFile(file)
+//        val uri = Uri.fromFile(file)
 
         if (compressedImageData != null) {
             storageReference!!.putBytes(compressedImageData).addOnSuccessListener {
@@ -201,7 +198,7 @@ class MainActivity : AppCompatActivity() {
                     val intent = Intent(this, ChatActivity::class.java).apply {
                         putExtra("EXTRA_URL", imageUrl)
                     }
-                            startActivity(intent)
+                    startActivity(intent)
                 }.addOnFailureListener {
                     // Handle any errors
                 }
@@ -231,7 +228,8 @@ class MainActivity : AppCompatActivity() {
         }
 
         val matrix = Matrix().apply { postRotate(rotationAngle.toFloat()) }
-        val rotatedBitmap = Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
+        val rotatedBitmap =
+            Bitmap.createBitmap(bitmap, 0, 0, bitmap.width, bitmap.height, matrix, true)
 
         val baos = ByteArrayOutputStream()
         rotatedBitmap.compress(Bitmap.CompressFormat.JPEG, 50, baos)
