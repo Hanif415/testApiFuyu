@@ -200,7 +200,7 @@ class MainActivity : AppCompatActivity() {
                     }
                     startActivity(intent)
                 }.addOnFailureListener {
-                    // Handle any errors
+                    loud("Terjadi kesalahan, tolong tangkap foto kembali")
                 }
             }.addOnFailureListener {
                 loud("Terjadi kesalahan, tolong tangkap foto kembali")

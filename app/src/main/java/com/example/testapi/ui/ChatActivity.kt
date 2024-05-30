@@ -101,6 +101,7 @@ class ChatActivity : AppCompatActivity() {
                 val data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 binding.ivMic.setImageResource(R.drawable.baseline_mic_none_24)
                 mp2?.start()
+
                 predict(
                     imageUrl,
                     data?.get(0) ?: "deskripsikan gambar itu dengan bahasa indonesia"
