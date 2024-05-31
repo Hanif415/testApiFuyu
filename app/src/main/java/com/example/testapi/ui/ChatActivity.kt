@@ -72,7 +72,7 @@ class ChatActivity : AppCompatActivity() {
 
         initSpeechToText()
 
-        predict(imageUrl, "deskripsikan gambar ini dalam bahasa indonesia")
+//        predict(imageUrl, "deskripsikan gambar ini dalam bahasa indonesia")
     }
 
     private fun initSpeechToText() {
@@ -113,6 +113,9 @@ class ChatActivity : AppCompatActivity() {
         })
 
         binding.mainView.setOnClickListener {
+            if (tts.isSpeaking) {
+                tts.stop()
+            }
             speechRecognizer.startListening(speechRecognizerIntent)
             binding.ivMic.setImageResource(R.drawable.baseline_mic_24)
             mp?.start()

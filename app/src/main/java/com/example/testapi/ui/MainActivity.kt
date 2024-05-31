@@ -117,6 +117,9 @@ class MainActivity : AppCompatActivity() {
                     ) {
                         activityResultLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     }
+                    if (tts!!.isSpeaking) {
+                        tts?.stop()
+                    }
                     takePicture(imageCapture)
                 }
 
