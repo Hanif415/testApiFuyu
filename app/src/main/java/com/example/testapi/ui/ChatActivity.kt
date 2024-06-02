@@ -72,6 +72,8 @@ class ChatActivity : AppCompatActivity() {
 
         initSpeechToText()
 
+        Log.d(TAG, imageUrl)
+
 //        predict(imageUrl, "deskripsikan gambar ini dalam bahasa indonesia")
     }
 
@@ -188,7 +190,7 @@ class ChatActivity : AppCompatActivity() {
                     } else {
                         val sentence = responseBody.output?.joinToString(" ")
                         if (sentence != null) {
-                            loud("$sentence,  silahkan ketuk layar untuk bertanya")
+                            loud("$sentence.  Silahkan ketuk layar untuk bertanya")
                         }
                     }
                 }

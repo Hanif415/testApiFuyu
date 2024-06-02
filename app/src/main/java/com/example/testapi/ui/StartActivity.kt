@@ -52,4 +52,12 @@ class StartActivity : AppCompatActivity() {
     private fun loud(text: String) {
         tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
     }
+
+    override fun onRestart() {
+        super.onRestart()
+        if (tts!!.isSpeaking) {
+            tts?.stop()
+        }
+        loud("Silahkan ketuk layar untuk memulai")
+    }
 }
