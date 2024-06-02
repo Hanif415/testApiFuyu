@@ -117,9 +117,6 @@ class MainActivity : AppCompatActivity() {
                     ) {
                         activityResultLauncher.launch(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                     }
-                    if (tts!!.isSpeaking) {
-                        tts?.stop()
-                    }
                     takePicture(imageCapture)
                 }
 
@@ -239,7 +236,6 @@ class MainActivity : AppCompatActivity() {
         return baos.toByteArray()
     }
 
-
     private fun loud(text: String) {
         tts!!.speak(text, TextToSpeech.QUEUE_FLUSH, null, null);
     }
@@ -247,6 +243,9 @@ class MainActivity : AppCompatActivity() {
     override fun onRestart() {
         super.onRestart()
         startCamera(cameraFacing)
+        if (tts!!.isSpeaking) {
+            tts?.stop()
+        }
         loud("silahkan ketuk layar untuk mengambil foto")
     }
 }
