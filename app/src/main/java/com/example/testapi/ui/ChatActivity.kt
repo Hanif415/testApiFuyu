@@ -74,7 +74,7 @@ class ChatActivity : AppCompatActivity() {
 
         Log.d(TAG, imageUrl)
 
-//        predict(imageUrl, "deskripsikan gambar ini dalam bahasa indonesia")
+        predict(imageUrl, "deskripsikan gambar ini dalam bahasa indonesia")
     }
 
     private fun initSpeechToText() {
@@ -99,6 +99,7 @@ class ChatActivity : AppCompatActivity() {
             override fun onError(i: Int) {
                 loud("terjadi kesalahan, tolong ketuk kembali layar untuk bertanya")
             }
+
             override fun onResults(bundle: Bundle) {
                 val data = bundle.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)
                 binding.ivMic.setImageResource(R.drawable.baseline_mic_none_24)
@@ -149,7 +150,10 @@ class ChatActivity : AppCompatActivity() {
 
         val client = ApiConfig.getApiService().postTheImage(myData)
         client.enqueue(object : Callback<PredictResponse> {
-            override fun onResponse(call: Call<PredictResponse>, response: Response<PredictResponse>) {
+            override fun onResponse(
+                call: Call<PredictResponse>,
+                response: Response<PredictResponse>
+            ) {
                 val responseBody = response.body()
                 if (responseBody != null) {
                     getResult(responseBody.id)
@@ -187,11 +191,17 @@ class ChatActivity : AppCompatActivity() {
                                 getResult(id)
                             }
                         }
-                    } else {
+                    } else if (responseBody.status == "succeeded") {
                         val sentence = responseBody.output?.joinToString(" ")
                         if (sentence != null) {
-                            loud("$sentence.  Silahkan ketuk layar untuk bertanya")
+                            loud("$sentence. Silahkan ketuk layar untuk bertanya")
+                        } else {
+                            loud("Terjadi kesalahan, mohon untuk ketuk layar kembali untuk bertanya")
                         }
+                    } else if (responseBody.status == "failed") {
+                        loud("Terjadi kesalahan, mohon untuk ketuk layar kembali untuk bertanya")
+                    } else {
+                        loud("Terjadi kesalahan, mohon untuk ketuk layar kembali untuk bertanya")
                     }
                 }
             }
