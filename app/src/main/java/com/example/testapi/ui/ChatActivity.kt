@@ -74,7 +74,7 @@ class ChatActivity : AppCompatActivity() {
 
         Log.d(TAG, imageUrl)
 
-        predict(imageUrl, "deskripsikan gambar ini dalam bahasa indonesia")
+        predict(imageUrl, "gambar apakah itu?")
     }
 
     private fun initSpeechToText() {
@@ -107,7 +107,7 @@ class ChatActivity : AppCompatActivity() {
 
                 predict(
                     imageUrl,
-                    data?.get(0) ?: "deskripsikan gambar itu dengan bahasa indonesia"
+                    data?.get(0) ?: "gambar apakah itu?"
                 )
             }
 
@@ -157,6 +157,8 @@ class ChatActivity : AppCompatActivity() {
                 val responseBody = response.body()
                 if (responseBody != null) {
                     getResult(responseBody.id)
+                } else {
+                    loud("Terjadi kesalahan sistem")
                 }
             }
 
@@ -183,7 +185,8 @@ class ChatActivity : AppCompatActivity() {
                                 getResult(id)
                             }
                         }
-                    } else if (responseBody.status == "processing") {
+                    }
+                    if (responseBody.status == "processing") {
                         loud("memproses, harap tunggu sebentar lagi")
                         runBlocking {
                             launch {
@@ -191,16 +194,16 @@ class ChatActivity : AppCompatActivity() {
                                 getResult(id)
                             }
                         }
-                    } else if (responseBody.status == "succeeded") {
-                        val sentence = responseBody.output?.joinToString(" ")
-                        if (sentence != null) {
+                    }
+                    if (responseBody.status == "succeeded") {
+                        if (responseBody.output != null) {
+                            val sentence = responseBody.output.joinToString(" ")
                             loud("$sentence. Silahkan ketuk layar untuk bertanya")
                         } else {
                             loud("Terjadi kesalahan, mohon untuk ketuk layar kembali untuk bertanya")
                         }
-                    } else if (responseBody.status == "failed") {
-                        loud("Terjadi kesalahan, mohon untuk ketuk layar kembali untuk bertanya")
-                    } else {
+                    }
+                    if (responseBody.status == "failed") {
                         loud("Terjadi kesalahan, mohon untuk ketuk layar kembali untuk bertanya")
                     }
                 }
@@ -209,7 +212,6 @@ class ChatActivity : AppCompatActivity() {
             override fun onFailure(call: Call<ResultResponse>, t: Throwable) {
                 Log.e(TAG, "onFailure: ${t.message}")
             }
-
         })
     }
 
